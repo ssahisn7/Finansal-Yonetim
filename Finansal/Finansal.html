@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasa & Nakit Akışı Portföy Yönetimi</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #123e2b;
+            color: #333;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1450px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+
+        .header-title-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        h1 { color: #1e5631; font-size: 24px; }
+
+        .btn-reset {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .btn-reset:hover { background-color: #9a0007; }
+
+        .header-actions { display: flex; align-items: center; gap: 8px; }
+        .btn-guide {
+            background-color: #1565c0;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .btn-guide:hover { background-color: #0d47a1; }
+
+        .guide-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.55);
+            align-items: center;
+            justify-content: center;
+        }
+        .guide-modal.is-open { display: flex; }
+        .guide-dialog {
+            width: min(680px, 100%);
+            max-height: 85vh;
+            overflow-y: auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+            padding: 24px;
+        }
+        .guide-dialog h2 { color: #1e5631; font-size: 20px; margin-bottom: 12px; }
+        .guide-dialog p { color: #444; font-size: 14px; line-height: 1.6; margin-bottom: 14px; }
+        .guide-dialog ol { padding-left: 22px; color: #444; font-size: 14px; line-height: 1.65; }
+        .guide-dialog li { margin-bottom: 8px; }
+        .guide-close { float: right; background: none; border: 0; font-size: 24px; color: #666; cursor: pointer; line-height: 1; }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            padding: 16px;
+            border-radius: 10px;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .card h3 { font-size: 13px; opacity: 0.9; margin-bottom: 6px; }
+        .card .amount { font-size: 22px; font-weight: bold; }
+        .card .subtext { font-size: 11px; opacity: 0.85; margin-top: 4px; }
+
+        .bg-income { background: linear-gradient(135deg, #2e7d32, #1b5e20); }
+        .bg-expense { background: linear-gradient(135deg, #c62828, #8e0000); }
+        .bg-balance { background: linear-gradient(135deg, #e65100, #bf360c); }
+
+        .grid-main {
+            display: grid;
+            grid-template-columns: 1.6fr 1.4fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 1100px) {
+            .grid-main { grid-template-columns: 1fr; }
+        }
+
+        .grid-tables { display: grid; grid-template-columns: 1fr; gap: 20px; }
+
+        .section-box {
+            background: #f8fbf9;
+            border: 1px solid #dcdcdc;
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        .section-box h2 {
+            font-size: 16px;
+            color: #1e5631;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px dashed #1e5631;
+            padding-bottom: 8px;
+        }
+
+        .input-group {
+            display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;
+        }
+
+        .input-group input, .input-group select {
+            padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; outline: none;
+        }
+        .input-group input:focus { border-color: #1e5631; }
+
+        .flex-1 { flex: 1; min-width: 120px; }
+        .w-80 { width: 80px; }
+        .w-100 { width: 100px; }
+
+        .btn {
+            background-color: #1e5631; color: white; border: none; padding: 8px 14px;
+            border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s;
+        }
+        .btn:hover { background-color: #143b21; }
+        .btn-danger { background-color: #d32f2f; }
+        .btn-danger:hover { background-color: #9a0007; }
+        .btn-action { background-color: #0277bd; width: 100%; margin-top: 10px; padding: 12px; font-size: 14px; }
+        .btn-action:hover { background-color: #01579b; }
+        .btn-undo { background-color: #f57f17; width: 100%; margin-top: 8px; padding: 10px; font-size: 13px; }
+        .btn-undo:hover { background-color: #e65100; }
+
+        table {
+            width: 100%; border-collapse: collapse; font-size: 13px; background: white;
+            border-radius: 6px; overflow: hidden; border: 1px solid #e0e0e0;
+        }
+        th { background: #eaf2ed; color: #1e5631; padding: 8px 10px; text-align: left; }
+        td { padding: 8px 10px; border-top: 1px solid #eee; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        .sidebar-container { display: flex; flex-direction: column; gap: 20px; }
+
+        .strategy-card {
+            background: #f4f8f5; border-left: 4px solid #1e5631; padding: 10px 12px;
+            border-radius: 4px; font-size: 12.5px; line-height: 1.5; margin-bottom: 10px;
+        }
+        .strategy-card.warning { background: #fff3e0; border-left-color: #e65100; }
+        .strategy-card.danger { background: #ffebee; border-left-color: #c62828; }
+        .strategy-card.invest { background: #e0f2f1; border-left-color: #00796b; }
+        .strategy-title { font-weight: bold; margin-bottom: 3px; color: #111; }
+
+        .invest-input-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;
+        }
+        .invest-input-grid label { font-size: 11px; font-weight: 600; color: #555; display: block; margin-bottom: 2px; }
+        .invest-input-grid input { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+
+        .positive { color: #2e7d32; }
+        .negative { color: #c62828; }
+        
+        .kasa-box {
+            background: linear-gradient(135deg, #1e5631, #004d40);
+            color: white;
+            border: none;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .kasa-box h2 { border-bottom: 1px solid rgba(255,255,255,0.2); color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-title-bar">
+        <h1>💰 Finansal Senaryo & Nakit Akışı Portföy Yönetimi</h1>
+        <div class="header-actions">
+            <button class="btn-guide" type="button" onclick="openGuide()">❔ Kullanım Kılavuzu</button>
+            <button class="btn-reset" onclick="resetAllData()">🔄 Verileri Sıfırla</button>
+        </div>
+    </div>
+
+    <div class="guide-modal" id="guideModal" role="dialog" aria-modal="true" aria-labelledby="guideTitle" onclick="closeGuideOnBackdrop(event)">
+        <div class="guide-dialog">
+            <button class="guide-close" type="button" aria-label="Kılavuzu kapat" onclick="closeGuide()">×</button>
+            <h2 id="guideTitle">👋 Kullanım Kılavuzu</h2>
+            <p>Hoş geldin! Bu sitenin amacı, finansal durumunu ve birikim planını tek yerden yönetmene yardımcı olmaktır.</p>
+            <ol>
+                <li><b>Kasayı kur:</b> İlk olarak toplam ana paranı, gram altın bilgilerini ve BIST/fon dağılımını gir. Altın değeri düşüldükten sonra kalan tutar seçtiğin oranlarda BIST ve fona dağıtılır.</li>
+                <li><b>Gelirlerini ekle:</b> Maaş gibi her ay gelen tutarları <b>Aylık Düzenli Gelir</b>, yalnızca bu ay eline geçecek tutarları ise <b>Tek Seferlik</b> olarak ekle.</li>
+                <li><b>Her ayın 15’inde işlem yap:</b> O ayki giderlerini, varsa BIST yatırımlarındaki kâr veya zararını ve güncel gram altın fiyatını gir. Ardından <b>Ayın 15’ini İşle</b> butonuna bas.</li>
+                <li><b>Fon getirisi otomatik eklenir:</b> Bu işlem sırasında fondaki paran için seçtiğin günlük getiri oranına göre aylık fon getirisi hesaplanır; gelirler ve giderler de kasana yansıtılır.</li>
+                <li><b>Gelecek simülasyonunu ayarla:</b> Simülasyon başlangıçta ZPK fonu varsayımıyla düzenlenmiştir. Günlük fon getirisi, süre, dolar kuru ve aylık dolar artışı alanlarını kendi tercih ettiğin fona ve beklentine göre değiştirebilirsin.</li>
+                <li><b>Borçlarını takip et:</b> Alttaki borç bölümünden taksitli borçlarını ekleyebilirsin. <b>Ertelendi</b> seçeneği, borcun varmış gibi birikim yapmak isteyenler için eklenmiştir; dilediğin zaman aktif veya ertelenmiş duruma alabilirsin.</li>
+                <li><b>Hedef belirle:</b> Hedef bölümüne ulaşmak istediğin tutarı yaz. Sistem, aylık net getirine ve fon varsayımlarına göre hedefe yaklaşık ne zaman ulaşabileceğini gösterir.</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Üst Özet Kartları -->
+    <div class="cards-grid">
+        <div class="card bg-income">
+            <h3>Aylık Düzenli Gelirler</h3>
+            <div class="amount" id="totalIncomeAll">₺0,00</div>
+        </div>
+        <div class="card bg-expense">
+            <h3>Aylık Aktif Sabit Taksit</h3>
+            <div class="amount" id="totalMonthlyExpense">₺0,00</div>
+        </div>
+        <div class="card bg-balance">
+            <h3>Ayın 15'inde Giderler Öncesi Net Kalan</h3>
+            <div class="amount" id="netMonthlyBalance">₺0,00</div>
+        </div>
+    </div>
+
+    <div class="grid-main">
+        
+        <!-- Sol Taraf -->
+        <div class="grid-tables">
+            
+            <!-- Kasa Kurulumu -->
+            <div class="section-box">
+                <h2>⚙️ İlk Kasa (Ana Para) Kurulumu & Düzenleme</h2>
+                <div class="invest-input-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr 1fr;">
+                    <div><label>Top. Ana Para (₺)</label><input type="number" id="setupTotal" value="100000"></div>
+                    <div><label>Gram Altın (₺)</label><input type="number" id="setupGoldPrice" value="3000"></div>
+                    <div><label>Altın (Gram)</label><input type="number" id="setupGoldGrams" value="10"></div>
+                    <div><label>BIST Oranı (%)</label><input type="number" id="setupBist" value="50"></div>
+                    <div><label>Fon Oranı (%)</label><input type="number" id="setupFon" value="50"></div>
+                </div>
+                <button class="btn" style="width: 100%;" onclick="setupPortfolio()">Kasayı Kur / Güncelle</button>
+                <small style="color:#666; display:block; margin-top:5px; text-align:center;">Altın değeri düşüldükten sonra kalan para BIST ve Fona dağıtılır (Toplam 100 olmalı).</small>
+            </div>
+
+            <!-- Gelirler -->
+            <div class="section-box">
+                <h2>💵 Gelirler (Maaş & Ek Gelirler)</h2>
+                <div class="input-group">
+                    <input type="text" id="incName" class="flex-1" placeholder="Gelir Adı">
+                    <input type="number" id="incAmount" class="flex-1" placeholder="Tutar (₺)">
+                    <select id="incType">
+                        <option value="fixed">Aylık Düzenli Gelir</option>
+                        <option value="one_time">⚡ Tek Seferlik (Bu Ay)</option>
+                    </select>
+                    <button class="btn" onclick="addIncome()">Ekle</button>
+                </div>
+                <table>
+                    <thead><tr><th>Gelir Adı</th><th>Tür</th><th class="text-right">Tutar</th><th style="width: 40px;"></th></tr></thead>
+                    <tbody id="incomeTable"></tbody>
+                </table>
+            </div>
+
+            <!-- Borçlar -->
+            <div class="section-box">
+                <h2>💳 Sabit Taksitler & Borçlar (Kredi vb.)</h2>
+                <div class="input-group">
+                    <input type="text" id="expName" class="flex-1" placeholder="Borç Adı">
+                    <input type="number" id="expAmount" class="flex-1" placeholder="Toplam Borç (₺)">
+                    <input type="number" id="expInstallments" class="w-80" placeholder="Taksit" value="1" min="1">
+                    <select id="expStatus">
+                        <option value="active">Aktif Ödeniyor</option>
+                        <option value="frozen" selected>Ertelendi</option>
+                    </select>
+                    <button class="btn" onclick="addExpense()">Borç Ekle</button>
+                </div>
+                <table>
+                    <thead><tr><th>Borç Adı</th><th class="text-right">Top. Borç</th><th class="text-center">Taksit</th><th class="text-center">Durum</th><th class="text-right">Aylık Taksit</th><th style="width: 40px;"></th></tr></thead>
+                    <tbody id="expenseTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sağ Taraf -->
+        <div class="sidebar-container">
+            
+            <!-- Canlı Kasa -->
+            <div class="section-box kasa-box">
+                <h2>💼 Toplam Kasa (Canlı Portföy Durumu)</h2>
+                <div style="font-size:34px; font-weight:bold; margin-bottom:15px; letter-spacing: 1px;" id="totalKasaDisplay">₺0,00</div>
+                
+                <div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom:5px;">
+                    <span>📈 BIST Portföyü:</span> <strong id="kasaBist">₺0,00</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom:5px;">
+                    <span>📊 Fon Portföyü:</span> <strong id="kasaFon">₺0,00</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:14px;">
+                    <span>🪙 Altın (<span id="kasaGoldGrams">0</span> gr):</span> <strong id="kasaGold">₺0,00</strong>
+                </div>
+            </div>
+
+            <!-- Ayın 15'i Nakit Akışı ve Geri Alma -->
+            <div class="section-box">
+                <h2>📅 Ayın 15'i - Nakit Akışı & İşlemler</h2>
+                <div class="strategy-card invest" style="background:#e3f2fd; border-left-color:#1976d2;">
+                    Ayın 15'inde bu butona basarak net kalanı fona aktarabilirsiniz. Yanlış işlem yaparsanız alttaki butondan geri alabilirsiniz.
+                </div>
+                <div class="invest-input-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                    <div>
+                        <label>Bu Ayki Giderler (₺):</label>
+                        <input type="number" id="extraExpense15" value="0" placeholder="Örn: 5000">
+                    </div>
+                    <div>
+                        <label>BIST Kâr/Zarar (₺):</label>
+                        <input type="number" id="bistPnL" value="0" placeholder="Örn: 2500">
+                    </div>
+                    <div>
+                        <label>Güncel Gram Altın (₺):</label>
+                        <input type="number" id="newGoldPrice" value="3000">
+                    </div>
+                </div>
+                <button class="btn btn-action" onclick="process15th()">🚀 Ayın 15'ini İşle</button>
+                <button class="btn btn-undo" id="undoBtn" onclick="undoLastProcess()" style="display:none;">↩️ Son İşlemi Geri Al (Rollback)</button>
+            </div>
+
+            <!-- Simülatör -->
+            <div class="section-box">
+                <h2>🔮 Gelecek Simülasyonu</h2>
+                <div class="invest-input-grid">
+                    <div><label>Günlük Fon Getirisi (%):</label><input type="number" id="dailyRate" value="0.08" step="0.01" onchange="saveConfigAndUI()"></div>
+                    <div><label>Yatırım Süresi (Ay):</label><input type="number" id="investMonths" value="12" min="1" onchange="saveConfigAndUI()"></div>
+                    <div><label>Dolar Kuru (₺):</label><input type="number" id="usdRateCurrent" value="47.34" step="0.1" onchange="saveConfigAndUI()"></div>
+                    <div><label>Aylık Dolar Artışı (%):</label><input type="number" id="usdMonthlyIncrease" value="1.5" step="0.1" onchange="saveConfigAndUI()"></div>
+                </div>
+                <div id="investmentOutput"></div>
+            </div>
+
+            <!-- Hedef -->
+            <div class="section-box">
+                <h2>🎯 Hedef Planlayıcı</h2>
+                <div class="invest-input-grid">
+                    <div><label>Hedef Adı:</label><input type="text" id="goalName" value="Araba Peşinatı" onkeyup="saveConfigAndUI()"></div>
+                    <div><label>Hedef Tutarı (₺):</label><input type="number" id="goalAmount" value="500000" step="1000" onchange="saveConfigAndUI()"></div>
+                </div>
+                <div id="goalOutput"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const defaultIncomes = [];
+    const defaultExpenses = [];
+    const defaultPortfolio = { bist: 0, fon: 0, goldGrams: 0, goldPrice: 3000 };
+
+    let incomes = JSON.parse(localStorage.getItem('my_incomes')) || defaultIncomes;
+    let expenses = JSON.parse(localStorage.getItem('my_expenses')) || defaultExpenses;
+    let portfolio = JSON.parse(localStorage.getItem('my_portfolio')) || defaultPortfolio;
+    
+    // Geri alma (Rollback) için önceki durumu hafızada tutma
+    let lastPortfolioState = JSON.parse(localStorage.getItem('last_portfolio_state')) || null;
+    let lastIncomesState = JSON.parse(localStorage.getItem('last_incomes_state')) || null;
+
+    const formatMoneyTL = (val) => '₺' + Number(val).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    function saveData() {
+        localStorage.setItem('my_incomes', JSON.stringify(incomes));
+        localStorage.setItem('my_expenses', JSON.stringify(expenses));
+        localStorage.setItem('my_portfolio', JSON.stringify(portfolio));
+        localStorage.setItem('last_portfolio_state', JSON.stringify(lastPortfolioState));
+        localStorage.setItem('last_incomes_state', JSON.stringify(lastIncomesState));
+    }
+
+    function saveConfigAndUI() {
+        const config = {
+            dailyRate: document.getElementById('dailyRate').value,
+            investMonths: document.getElementById('investMonths').value,
+            usdRateCurrent: document.getElementById('usdRateCurrent').value,
+            usdMonthlyIncrease: document.getElementById('usdMonthlyIncrease').value,
+            goalName: document.getElementById('goalName').value,       
+            goalAmount: document.getElementById('goalAmount').value    
+        };
+        localStorage.setItem('my_config', JSON.stringify(config));
+        updateUI();
+    }
+
+    function loadConfig() {
+        const savedConfig = JSON.parse(localStorage.getItem('my_config'));
+        if (savedConfig) {
+            document.getElementById('dailyRate').value = savedConfig.dailyRate || 0.08;
+            document.getElementById('investMonths').value = savedConfig.investMonths || 12;
+            document.getElementById('usdRateCurrent').value = savedConfig.usdRateCurrent || 47.34;
+            document.getElementById('usdMonthlyIncrease').value = savedConfig.usdMonthlyIncrease || 1.5;
+            document.getElementById('goalName').value = savedConfig.goalName || 'Araba Peşinatı'; 
+            document.getElementById('goalAmount').value = savedConfig.goalAmount || 500000;       
+        }
+    }
+
+    function resetAllData() {
+        if (confirm("Tüm verileri varsayılana sıfırlamak istediğinden emin misin Salihimm?")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    function openGuide() {
+        document.getElementById('guideModal').classList.add('is-open');
+    }
+
+    function closeGuide() {
+        document.getElementById('guideModal').classList.remove('is-open');
+    }
+
+    function closeGuideOnBackdrop(event) {
+        if (event.target === event.currentTarget) closeGuide();
+    }
+
+    function setupPortfolio() {
+        let total = parseFloat(document.getElementById('setupTotal').value) || 0;
+        let gPrice = parseFloat(document.getElementById('setupGoldPrice').value) || 3000;
+        let gGrams = parseFloat(document.getElementById('setupGoldGrams').value) || 0;
+        let pBist = parseFloat(document.getElementById('setupBist').value) || 0;
+        let pFon = parseFloat(document.getElementById('setupFon').value) || 0;
+
+        if (pBist + pFon !== 100) {
+            alert("BIST ve Fon oranlarının toplamı tam 100 olmalı!");
+            return;
+        }
+
+        let goldTLValue = gGrams * gPrice;
+        let remainingCash = total - goldTLValue;
+
+        if (remainingCash < 0) {
+            alert("Girdiğin altın miktarı toplam ana paranı aşıyor!");
+            return;
+        }
+
+        portfolio.goldPrice = gPrice;
+        portfolio.goldGrams = gGrams;
+        portfolio.bist = remainingCash * (pBist / 100);
+        portfolio.fon = remainingCash * (pFon / 100);
+
+        lastPortfolioState = null; // Kurulumda rollback sıfırlanır
+        saveData();
+        updateUI();
+        alert("Kasa başarıyla kuruldu!");
+    }
+
+    // --- 15'İ NAKİT AKIŞI DÖNGÜSÜ (YEDEKLEMELİ) ---
+    function process15th() {
+        if(!confirm("Bugün ayın 15'i döngüsünü işlemek istediğine emin misin?")) return;
+
+        // 1. İşlem öncesi durumu hafızaya al (Rollback için)
+        lastPortfolioState = JSON.parse(JSON.stringify(portfolio));
+        lastIncomesState = JSON.parse(JSON.stringify(incomes));
+
+        let extraExpense = parseFloat(document.getElementById('extraExpense15').value) || 0;
+        let bistPnL = parseFloat(document.getElementById('bistPnL').value) || 0;
+        let newGoldPrice = parseFloat(document.getElementById('newGoldPrice').value) || portfolio.goldPrice;
+        let dailyRate = parseFloat(document.getElementById('dailyRate').value) || 0.08;
+        
+        let monthlyFonMultiplier = Math.pow(1 + (dailyRate / 100), 30);
+
+        portfolio.fon = portfolio.fon * monthlyFonMultiplier;
+
+        let activeExpenses = expenses.filter(e => e.status === 'active');
+        let monthlyDebtTotal = activeExpenses.reduce((a, b) => a + (b.totalAmount / b.installments), 0);
+        let totalIncome = incomes.reduce((a, b) => a + b.amount, 0);
+        
+        let netKalan = totalIncome - monthlyDebtTotal - extraExpense;
+        portfolio.fon += netKalan;
+
+        let uyar = "";
+        if (portfolio.fon < 0) {
+            uyar = "\n⚠️ DİKKAT: Giderleriniz gelirinizi aştığı için fon bakiyeniz eksiye düştü!";
+        }
+
+        let oneTimeIncomes = incomes.filter(i => i.type === 'one_time');
+        oneTimeIncomes.forEach(inc => { portfolio.fon += inc.amount; });
+        incomes = incomes.filter(i => i.type !== 'one_time');
+
+        portfolio.bist += bistPnL;
+        if (portfolio.bist < 0) portfolio.bist = 0; 
+        portfolio.goldPrice = newGoldPrice;
+
+        document.getElementById('extraExpense15').value = '';
+        document.getElementById('bistPnL').value = '';
+
+        saveData();
+        updateUI();
+        alert("İşlem başarıyla tamamlandı!" + uyar);
+    }
+
+    // --- SON İŞLEMİ GERİ AL (ROLLBACK) ---
+    function undoLastProcess() {
+        if (!lastPortfolioState) return;
+        if (!confirm("En son yapılan ayın 15'i işlemini ve eklenen/silinen gelirleri geri almak istediğine emin misin?")) return;
+
+        portfolio = JSON.parse(JSON.stringify(lastPortfolioState));
+        incomes = JSON.parse(JSON.stringify(lastIncomesState));
+        
+        lastPortfolioState = null;
+        lastIncomesState = null;
+
+        saveData();
+        updateUI();
+        alert("Son işlem başarıyla geri alındı!");
+    }
+
+    function addIncome() {
+        const name = document.getElementById('incName').value.trim();
+        const amount = parseFloat(document.getElementById('incAmount').value);
+        const type = document.getElementById('incType').value;
+        if (!name || isNaN(amount) || amount <= 0) return;
+
+        incomes.push({ id: Date.now(), name, amount, type });
+        document.getElementById('incName').value = '';
+        document.getElementById('incAmount').value = '';
+        saveData(); updateUI();
+    }
+
+    function addExpense() {
+        const name = document.getElementById('expName').value.trim();
+        const totalAmount = parseFloat(document.getElementById('expAmount').value);
+        const installments = parseInt(document.getElementById('expInstallments').value) || 1;
+        const status = document.getElementById('expStatus').value;
+        if (!name || isNaN(totalAmount) || totalAmount <= 0) return;
+
+        expenses.push({ id: Date.now(), name, totalAmount, installments, status });
+        document.getElementById('expName').value = '';
+        document.getElementById('expAmount').value = '';
+        saveData(); updateUI();
+    }
+
+    function removeIncome(id) { incomes = incomes.filter(item => item.id !== id); saveData(); updateUI(); }
+    function removeExpense(id) { expenses = expenses.filter(item => item.id !== id); saveData(); updateUI(); }
+    
+    function toggleStatus(id) {
+        const exp = expenses.find(e => e.id === id);
+        if (exp) { exp.status = exp.status === 'active' ? 'frozen' : 'active'; saveData(); updateUI(); }
+    }
+
+    function updateUI() {
+        document.getElementById('incomeTable').innerHTML = incomes.map(item => {
+            let typeBadge = item.type === 'fixed' 
+                ? `<small style="background:#e8f5e9; color:#2e7d32; padding: 2px 6px; border-radius: 4px;">Düzenli</small>`
+                : `<small style="background:#fff3e0; color:#e65100; padding: 2px 6px; border-radius: 4px;">⚡ Tek Seferlik</small>`;
+            return `<tr><td>${item.name}</td><td>${typeBadge}</td><td class="text-right">${formatMoneyTL(item.amount)}</td><td><button class="btn btn-danger" style="padding:2px 6px; font-size:11px;" onclick="removeIncome(${item.id})">✕</button></td></tr>`;
+        }).join('');
+
+        document.getElementById('expenseTable').innerHTML = expenses.map(item => {
+            const isFrozen = item.status === 'frozen';
+            const monthly = isFrozen ? 0 : (item.totalAmount / item.installments);
+            return `<tr style="${isFrozen ? 'background-color:#fffde7;' : ''}">
+                <td>${item.name}</td>
+                <td class="text-right">${formatMoneyTL(item.totalAmount)}</td>
+                <td class="text-center">${item.installments}</td>
+                <td class="text-center"><button onclick="toggleStatus(${item.id})" style="padding:3px 8px; font-size:11px; cursor:pointer; border-radius:4px; border:none; background:${isFrozen ? '#f57f17' : '#2e7d32'}; color:white;">${isFrozen ? '❄️ Ertelendi' : '▶️ Aktif'}</button></td>
+                <td class="text-right" style="font-weight:bold; color:${isFrozen ? '#999' : '#c62828'};">${isFrozen ? '₺0,00' : formatMoneyTL(monthly)}</td>
+                <td><button class="btn btn-danger" style="padding:2px 6px; font-size:11px;" onclick="removeExpense(${item.id})">✕</button></td>
+            </tr>`;
+        }).join('');
+
+        const totalIncomeAll = incomes.reduce((a, b) => a + b.amount, 0);
+        const activeExpenses = expenses.filter(e => e.status === 'active');
+        const monthlyDebtTotal = activeExpenses.reduce((a, b) => a + (b.totalAmount / b.installments), 0);
+        const netAllMonthly = totalIncomeAll - monthlyDebtTotal;
+
+        document.getElementById('totalIncomeAll').innerText = formatMoneyTL(totalIncomeAll);
+        document.getElementById('totalMonthlyExpense').innerText = formatMoneyTL(monthlyDebtTotal);
+        document.getElementById('netMonthlyBalance').innerText = formatMoneyTL(netAllMonthly);
+
+        let currentGoldValue = portfolio.goldGrams * portfolio.goldPrice;
+        let totalKasa = portfolio.bist + portfolio.fon + currentGoldValue;
+
+        document.getElementById('totalKasaDisplay').innerText = formatMoneyTL(totalKasa);
+        document.getElementById('kasaBist').innerText = formatMoneyTL(portfolio.bist);
+        document.getElementById('kasaFon').innerText = formatMoneyTL(portfolio.fon);
+        document.getElementById('kasaGold').innerText = formatMoneyTL(currentGoldValue);
+        document.getElementById('kasaGoldGrams').innerText = portfolio.goldGrams.toFixed(2);
+        
+        document.getElementById('newGoldPrice').value = portfolio.goldPrice;
+        document.getElementById('setupGoldPrice').value = portfolio.goldPrice;
+
+        // Geri alma butonunun görünürlüğünü yönet
+        const undoBtn = document.getElementById('undoBtn');
+        if (lastPortfolioState) {
+            undoBtn.style.display = 'block';
+        } else {
+            undoBtn.style.display = 'none';
+        }
+
+        renderInvestmentAndUSD(netAllMonthly, portfolio.fon, totalKasa);
+        renderGoal(netAllMonthly, totalKasa);
+    }
+
+    function renderInvestmentAndUSD(regularMonthlySavings, currentFonValue, totalKasa) {
+        const dailyRate = parseFloat(document.getElementById('dailyRate').value) || 0.08;
+        const months = parseInt(document.getElementById('investMonths').value) || 12;
+        const currentUsdRate = parseFloat(document.getElementById('usdRateCurrent').value) || 1;
+        const usdMonthlyIncrease = parseFloat(document.getElementById('usdMonthlyIncrease').value) || 0;
+        const monthlyFonMultiplier = Math.pow(1 + (dailyRate / 100), 30);
+        
+        let projectedFon = currentFonValue;
+        
+        for (let m = 1; m <= months; m++) {
+            projectedFon = (projectedFon + Math.max(0, regularMonthlySavings)) * monthlyFonMultiplier;
+        }
+
+        let nonFonAssets = totalKasa - currentFonValue; 
+        let futureTotalKasa = projectedFon + nonFonAssets;
+        const projectedUsdRate = currentUsdRate * Math.pow(1 + (usdMonthlyIncrease / 100), months);
+        const currentTotalUsd = totalKasa / currentUsdRate;
+        const futureTotalUsd = futureTotalKasa / projectedUsdRate;
+        const usdProfit = futureTotalUsd - currentTotalUsd;
+        const usdReturnPercent = currentTotalUsd > 0 ? (usdProfit / currentTotalUsd) * 100 : 0;
+        const formatMoneyUSD = (val) => '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const usdProfitClass = usdProfit >= 0 ? 'positive' : 'negative';
+        const usdProfitSign = usdProfit >= 0 ? '+' : '';
+
+        document.getElementById('investmentOutput').innerHTML = `
+        <div class="strategy-card invest">
+            <div class="strategy-title">🚀 ${months} Ay Sonra Kasa Beklentisi</div>
+            Aylık Düzenli Fona Eklenecek: <b>${formatMoneyTL(Math.max(0, regularMonthlySavings))}</b><br>
+            ${months} Ay Sonra Fon Değeri: <b>${formatMoneyTL(projectedFon)}</b><br><br>
+            <b style="font-size:14px;">Gelecek Toplam Kasa: <span style="color:#004d40;">${formatMoneyTL(futureTotalKasa)}</span></b><br>
+            <small>Tahmini ${months}. ay dolar kuru: ${formatMoneyTL(projectedUsdRate)}</small><br><br>
+            <b style="font-size:14px;">Tahmini Dolar Bazında Kasa: <span style="color:#004d40;">${formatMoneyUSD(futureTotalUsd)}</span></b><br>
+            <span class="${usdProfitClass}">Dolar bazında tahmini getiri: <b>${usdProfitSign}${formatMoneyUSD(usdProfit)} (${usdProfitSign}${usdReturnPercent.toFixed(2)}%)</b></span>
+        </div>`;
+    }
+
+    function renderGoal(regularMonthlySavings, totalKasa) {
+        const container = document.getElementById('goalOutput');
+        const goalName = document.getElementById('goalName').value || 'Hedef';
+        const goalAmount = parseFloat(document.getElementById('goalAmount').value) || 0;
+        const dailyRate = parseFloat(document.getElementById('dailyRate').value) || 0.08;
+        const monthlyFonMultiplier = Math.pow(1 + (dailyRate / 100), 30);
+
+        if (goalAmount <= 0) { container.innerHTML = `<div class="strategy-card">Lütfen geçerli bir tutar girin.</div>`; return; }
+        if (totalKasa >= goalAmount) { 
+            container.innerHTML = `<div class="strategy-card invest"><b class="positive">🎉 Hedefe çoktan ulaşıldı!</b></div>`; 
+            return; 
+        }
+        if (regularMonthlySavings <= 0) { 
+            container.innerHTML = `<div class="strategy-card danger">⚠️ Bütçeniz ekside.</div>`; 
+            return; 
+        }
+
+        let totalSaved = totalKasa; 
+        let monthCount = 0;
+
+        while (totalSaved < goalAmount) {
+            monthCount++;
+            totalSaved += regularMonthlySavings; 
+            totalSaved = totalSaved * monthlyFonMultiplier; 
+
+            if (monthCount > 360) { 
+                container.innerHTML = `<div class="strategy-card warning">⚠️ Çok uzun sürüyor (30+ yıl).</div>`; return; 
+            }
+        }
+
+        const years = Math.floor(monthCount / 12);
+        const months = monthCount % 12;
+        let timeString = years > 0 ? `${years} yıl ${months} ay` : `${months} ay`;
+
+        container.innerHTML = `
+        <div class="strategy-card invest">
+            <div class="strategy-title">🎯 Hedefe Ulaşım Zamanı</div>
+            Mevcut kasanız ve aylık <b>${formatMoneyTL(regularMonthlySavings)}</b> yatırımınızla:<br><br>
+            Ulaşılacak Süre: <b class="positive" style="font-size:15px;">${timeString} (${monthCount} Ay)</b>
+        </div>`;
+    }
+
+    loadConfig();
+    updateUI();
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeGuide();
+    });
+</script>
+
+</body>
+</html>
